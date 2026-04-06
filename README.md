@@ -165,7 +165,4 @@ A descriptive **name** and optional **description** were provided for the new fi
 - Windows Command Prompt — Process identification and termination
 - Windows Defender Firewall (Advanced Security) — Inbound rule configuration
 
-
-<img width="1011" height="703" alt="Image" src="https://github.com/user-attachments/assets/349204de-c15c-401c-8947-fe354719a427" />
-
 <img width="1858" height="49" alt="Image" src="https://github.com/user-attachments/assets/e2b6e20d-1a9c-494c-bed1-dd7c92da3916" />
