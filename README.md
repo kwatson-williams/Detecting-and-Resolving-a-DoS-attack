@@ -26,9 +26,6 @@ This walkthrough documents the step-by-step process of identifying and mitigatin
 
 The `.pcap` file was downloaded and opened in Wireshark. On initial inspection, anomalous behavior was observed between **packets 4 and 6**, with packets 6 onward displaying patterns consistent with a DoS attack. Key details visible in this view included the Source IP address, Destination IP address, and packet timestamps.
 
-![Wireshark Initial View](images/slide2_image1.png)
-
-![Packet List Overview](images/slide2_image2.png)
 
 ---
 
@@ -42,13 +39,6 @@ The `.pcap` file was downloaded and opened in Wireshark. On initial inspection, 
 
 A **TCP Stream** was executed to better understand the communication between the Source IP and the Destination IP. The stream output was first displayed in **ASCII**, then switched to **YAML** for plain-text readability. The YAML view revealed host information (`34.307.243.93` ↔ `10.2.2.5`), timestamps, packet details, and a **suspicious/unusual port number**, indicating potentially malicious activity.
 
-![TCP Stream ASCII View](images/slide3_image1.jpg)
-
-![TCP Stream YAML View](images/slide3_image2.png)
-
-![TCP Stream Details](images/slide3_image3.png)
-
-![Host & Port Information](images/slide3_image4.png)
 
 ---
 
@@ -79,13 +69,6 @@ netstat -ano | findstr :47394
 
 This narrowed network activity to **port 47394** and returned the associated **Process ID (PID)**.
 
-![Protocol Hierarchy Statistics](images/slide4_image1.jpg)
-
-![Router Advertisement Flood](images/slide4_image2.png)
-
-![netstat Command Output](images/slide4_image3.png)
-
-![PID Identified](images/slide4_image4.png)
 
 ---
 
@@ -101,12 +84,6 @@ sudo kill /[PID]
 
 This closed the malicious port and halted its use for further attacks.
 
-![Windows Defender Home Screen](images/slide5_image1.jpg)
-
-![Killing the Process](images/slide5_image2.png)
-
-![Port Closed Confirmation](images/slide5_image3.png)
-
 ---
 
 ## Step 5 — Opening Windows Defender Firewall
@@ -117,12 +94,6 @@ This closed the malicious port and halted its use for further attacks.
 
 To create a permanent firewall rule, **Windows Defender Firewall** was opened. From the main screen, **Advanced Settings** was selected to access the advanced firewall configuration panel.
 
-![Windows Defender Main Screen](images/slide6_image1.jpg)
-
-![Advanced Settings Panel](images/slide6_image2.png)
-
-![Inbound Rules Overview](images/slide6_image3.png)
-
 ---
 
 ## Step 6 — Creating a New Inbound Rule
@@ -132,12 +103,6 @@ To create a permanent firewall rule, **Windows Defender Firewall** was opened. F
 <img width="707" height="516" alt="Image" src="https://github.com/user-attachments/assets/01c92cd7-8cac-4796-8cd7-cad0da37fd57" />
 
 Inside the Advanced Settings panel, the **Inbound Rules** section was accessed. On the right-hand side, **New Rule** was double-clicked to open the New Inbound Rule Wizard, which allows configuration of custom traffic-blocking parameters.
-
-![New Rule Option](images/slide7_image1.jpg)
-
-![New Inbound Rule Wizard](images/slide7_image2.png)
-
-![Rule Type Selection](images/slide7_image3.png)
 
 ---
 
@@ -153,12 +118,6 @@ The rule was configured as follows:
 - **Protocol:** UDP — confirmed by Protocol Hierarchy Statistics showing the malicious packets used **UDP, not TCP**.
 - **Port Specified:** `47394` — the exact port identified during analysis.
 
-![Port Rule Type Selected](images/slide8_image1.jpg)
-
-![UDP Protocol Selection](images/slide8_image2.png)
-
-![Port 47394 Specified](images/slide8_image3.png)
-
 ---
 
 ## Step 8 — Blocking the Connection
@@ -172,10 +131,6 @@ The rule action was set to **Block the connection** to prevent any traffic from 
 - ✅ Domain
 - ✅ Private
 - ✅ Public
-
-![Block the Connection Selected](images/slide9_image1.jpg)
-
-![Profile Selection (Domain/Private/Public)](images/slide9_image2.png)
 
 ---
 
