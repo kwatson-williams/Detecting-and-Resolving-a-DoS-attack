@@ -164,5 +164,3 @@ A descriptive **name** and optional **description** were provided for the new fi
 - [Wireshark](https://www.wireshark.org/) — Packet capture and network analysis
 - Windows Command Prompt — Process identification and termination
 - Windows Defender Firewall (Advanced Security) — Inbound rule configuration
-
-<img width="1858" height="49" alt="Image" src="https://github.com/user-attachments/assets/e2b6e20d-1a9c-494c-bed1-dd7c92da3916" />
