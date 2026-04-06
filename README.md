@@ -1,101 +1,215 @@
-# Detecting & Resolving a DoS Attack
+# Cap 191.2.4 — DoS Attack Investigation & Mitigation
 
-### Once I downloaded the pcap, it generated an issue that needed to be resolved. My mission was to determine the threat that impacted the host and resolve it. Key skills and tools utilized were threat detection and analysis via Wireshark, Powershell, and Windows Defender. 
+This walkthrough documents the step-by-step process of identifying and mitigating a **Denial of Service (DoS) attack** using Wireshark, Windows Command Prompt, and Windows Defender Firewall.
 
+---
 
+## Table of Contents
 
+- [Step 1 — Download & Initial Inspection](#step-1--download--initial-inspection)
+- [Step 2 — TCP Stream Analysis](#step-2--tcp-stream-analysis)
+- [Step 3 — Protocol Hierarchy & Process Identification](#step-3--protocol-hierarchy--process-identification)
+- [Step 4 — Killing the Malicious Port](#step-4--killing-the-malicious-port)
+- [Step 5 — Opening Windows Defender Firewall](#step-5--opening-windows-defender-firewall)
+- [Step 6 — Creating a New Inbound Rule](#step-6--creating-a-new-inbound-rule)
+- [Step 7 — Configuring the Rule (Port & Protocol)](#step-7--configuring-the-rule-port--protocol)
+- [Step 8 — Blocking the Connection](#step-8--blocking-the-connection)
+- [Step 9 — Naming & Finalizing the Rule](#step-9--naming--finalizing-the-rule)
 
-<img width="742" height="550" alt="Image" src="https://github.com/user-attachments/assets/5edfdf1e-b45a-43da-9d31-3bf506c1de95" />
+---
 
-<img width="665" height="49" alt="Image" src="https://github.com/user-attachments/assets/513df9df-5b22-4517-8dc1-3a7c9e316acd" />
+## Step 1 — Download & Initial Inspection
 
-<img width="625" height="560" alt="Image" src="https://github.com/user-attachments/assets/6c057a54-5aa7-4a0c-88c3-6b37bf79f8ac" />
+<img width="742" height="550" alt="Image" src="https://github.com/user-attachments/assets/07006730-f6d4-45f0-8eba-db4c2b00d16b" />
 
-<img width="1055" height="49" alt="Image" src="https://github.com/user-attachments/assets/d7a76b6b-59d3-4952-a2b3-ca7cfdaccb43" />
+<img width="625" height="560" alt="Image" src="https://github.com/user-attachments/assets/11e7ae45-65c6-4605-aaf6-1c42ef05b89f" />
 
-<img width="868" height="49" alt="Image" src="https://github.com/user-attachments/assets/6c213c69-eb63-4178-821a-8ded2c8a5170" />
+The `.pcap` file was downloaded and opened in Wireshark. On initial inspection, anomalous behavior was observed between **packets 4 and 6**, with packets 6 onward displaying patterns consistent with a DoS attack. Key details visible in this view included the Source IP address, Destination IP address, and packet timestamps.
 
-<img width="1095" height="49" alt="Image" src="https://github.com/user-attachments/assets/1ae037a9-b555-4541-aec6-6ad7c606435b" />
+![Wireshark Initial View](images/slide2_image1.png)
 
-<img width="1163" height="49" alt="Image" src="https://github.com/user-attachments/assets/2252c692-3d48-454d-a62d-8920080de669" />
+![Packet List Overview](images/slide2_image2.png)
 
-<img width="833" height="49" alt="Image" src="https://github.com/user-attachments/assets/74d53ca4-4d7d-4974-94e5-4d4ac9b9396e" />
+---
 
-<img width="516" height="577" alt="Image" src="https://github.com/user-attachments/assets/f0e97f0f-e148-4543-b346-074da421784d" />
+## Step 2 — TCP Stream Analysis
 
-<img width="1408" height="49" alt="Image" src="https://github.com/user-attachments/assets/fcbbfabd-2dec-4735-a904-21952eeba4bf" />
+<img width="516" height="577" alt="Image" src="https://github.com/user-attachments/assets/a2e310c6-6e82-46f0-9f14-32c59e12ff9c" />
 
-<img width="454" height="517" alt="Image" src="https://github.com/user-attachments/assets/2d71ba8a-3848-48fe-9ce9-fff5de2b42e5" />
+<img width="454" height="517" alt="Image" src="https://github.com/user-attachments/assets/6f0402c7-bcbb-4cc5-a3da-0785d6f1ecd5" />
 
-<img width="1457" height="49" alt="Image" src="https://github.com/user-attachments/assets/39036fef-2ab5-4744-a690-216fa55ea63c" />
+<img width="516" height="577" alt="Image" src="https://github.com/user-attachments/assets/4c575f80-be05-4045-8478-5efad4fe7b1a" />
 
-<img width="516" height="577" alt="Image" src="https://github.com/user-attachments/assets/86c2de98-ab4a-400f-95dd-cca0f2fb4b6a" />
+A **TCP Stream** was executed to better understand the communication between the Source IP and the Destination IP. The stream output was first displayed in **ASCII**, then switched to **YAML** for plain-text readability. The YAML view revealed host information (`34.307.243.93` ↔ `10.2.2.5`), timestamps, packet details, and a **suspicious/unusual port number**, indicating potentially malicious activity.
 
-<img width="1844" height="49" alt="Image" src="https://github.com/user-attachments/assets/f97028b0-359e-46ec-a481-d8247f67a7bb" />
+![TCP Stream ASCII View](images/slide3_image1.jpg)
 
-<img width="600" height="49" alt="Image" src="https://github.com/user-attachments/assets/1ec0027e-8ddc-40aa-807a-98a833e69de2" />
+![TCP Stream YAML View](images/slide3_image2.png)
 
-<img width="566" height="395" alt="Image" src="https://github.com/user-attachments/assets/b32f88ec-751d-4345-b00d-49e8fc3366d4" />
+![TCP Stream Details](images/slide3_image3.png)
 
-<img width="2060" height="49" alt="Image" src="https://github.com/user-attachments/assets/94b858f7-2e80-4f4f-a739-739526630ecd" />
+![Host & Port Information](images/slide3_image4.png)
 
-<img width="1240" height="49" alt="Image" src="https://github.com/user-attachments/assets/a6bc55fa-6155-48a5-a1ec-440ec274be5b" />
+---
 
-<img width="1646" height="49" alt="Image" src="https://github.com/user-attachments/assets/ecd3ba75-e5b8-4a86-b9e4-45a2c05eed2f" />
+## Step 3 — Protocol Hierarchy & Process Identification
 
-<img width="566" height="382" alt="Image" src="https://github.com/user-attachments/assets/709e5f2f-eade-4bd3-af10-827655647953" />
+<img width="566" height="395" alt="Image" src="https://github.com/user-attachments/assets/228c646d-1ecb-4f38-aeca-c957302bf760" />
 
-<img width="1711" height="49" alt="Image" src="https://github.com/user-attachments/assets/922b5af8-02d4-4dfa-9a5d-d9984414734b" />
+<img width="566" height="382" alt="Image" src="https://github.com/user-attachments/assets/2e7cfc3e-df7f-49ab-8927-18ff54e7040a" />
 
-<img width="1335" height="49" alt="Image" src="https://github.com/user-attachments/assets/cf4d1620-b1e3-42fb-ae3a-1b1a44021614" />
+<img width="721" height="242" alt="Image" src="https://github.com/user-attachments/assets/6e6bf8c2-9471-4de1-a202-4eae6edd0731" />
 
-<img width="721" height="242" alt="Image" src="https://github.com/user-attachments/assets/fe91c475-9205-4ec6-91a5-c578baa8d289" />
+A **Protocol Hierarchy Statistics** report was generated in Wireshark, revealing the following:
 
-<img width="1769" height="49" alt="Image" src="https://github.com/user-attachments/assets/91b87e93-b2fe-421c-aff0-9bc5a64c818b" />
+| Protocol | % of Packets | Avg Packet Size |
+|----------|-------------|-----------------|
+| IPv6 / ICMPv6 | **83.6%** | 18.6 bytes |
+| QUIC IETF | 16.0% | 62.2 bytes |
 
-<img width="1909" height="49" alt="Image" src="https://github.com/user-attachments/assets/2bc12bdf-fb6c-42b1-bf15-42d05bb9752e" />
+Key findings:
+- The network was being **flooded with Router Advertisements** from multiple different MAC addresses within milliseconds — a hallmark of a DoS attack.
+- An ARP discovery request was observed: *"Who has 10.2.2.1? Tell 10.2.2.5"*, along with an associated MAC address.
 
-<img width="561" height="49" alt="Image" src="https://github.com/user-attachments/assets/6033eac4-c187-4a29-b5fa-959912b66a0a" />
+To identify the responsible process, the following command was run:
 
-<img width="721" height="325" alt="Image" src="https://github.com/user-attachments/assets/51ad94ed-e1cb-41bc-9468-02b8968e396b" />
+```cmd
+netstat -ano | findstr :47394
+```
 
-<img width="1039" height="49" alt="Image" src="https://github.com/user-attachments/assets/7b034143-3f44-410c-9371-2746503ff9dd" />
+This narrowed network activity to **port 47394** and returned the associated **Process ID (PID)**.
 
-<img width="781" height="514" alt="Image" src="https://github.com/user-attachments/assets/5ce739de-7e77-4b1f-aa51-12ff632d7984" />
+![Protocol Hierarchy Statistics](images/slide4_image1.jpg)
 
-<img width="1430" height="49" alt="Image" src="https://github.com/user-attachments/assets/594953e9-4ea9-4728-92af-0bd488429d95" />
+![Router Advertisement Flood](images/slide4_image2.png)
 
-<img width="1135" height="49" alt="Image" src="https://github.com/user-attachments/assets/39b6710c-0a9b-4f62-a45f-a31a4663893f" />
+![netstat Command Output](images/slide4_image3.png)
 
-<img width="781" height="470" alt="Image" src="https://github.com/user-attachments/assets/8ae8f221-c5c5-4080-914f-cbd95d70d0a0" />
+![PID Identified](images/slide4_image4.png)
 
-<img width="1945" height="49" alt="Image" src="https://github.com/user-attachments/assets/08dabd10-dd59-4820-b9a2-1bb334f5ec60" />
+---
 
-<img width="760" height="438" alt="Image" src="https://github.com/user-attachments/assets/f518dd02-8770-457f-9fa4-fcb5d407cdc7" />
+## Step 4 — Killing the Malicious Port
 
-<img width="803" height="49" alt="Image" src="https://github.com/user-attachments/assets/010e0b27-8dfc-4951-b8c6-58280a05b594" />
+<img width="721" height="325" alt="Image" src="https://github.com/user-attachments/assets/ac67a018-a40c-448e-ba44-0e0df690f80c" />
 
-<img width="707" height="516" alt="Image" src="https://github.com/user-attachments/assets/f300284a-ade2-4dba-bfe6-270e8e98ac9e" />
+With the PID identified, the process was terminated to immediately stop the port from being exploited:
 
-<img width="1348" height="49" alt="Image" src="https://github.com/user-attachments/assets/6fd763bb-ef91-4399-b17d-4ba5181134c9" />
+```cmd
+sudo kill /[PID]
+```
 
-<img width="692" height="528" alt="Image" src="https://github.com/user-attachments/assets/dcb28751-236b-4d18-8815-fbe563be1fab" />
+This closed the malicious port and halted its use for further attacks.
 
-<img width="971" height="49" alt="Image" src="https://github.com/user-attachments/assets/8c299a74-00fc-43b2-8814-0d86db8f8652" />
+![Windows Defender Home Screen](images/slide5_image1.jpg)
 
-<img width="807" height="567" alt="Image" src="https://github.com/user-attachments/assets/cefb0bc2-8b3b-4ac8-a6e5-cc475998b113" />
+![Killing the Process](images/slide5_image2.png)
 
-<img width="1428" height="49" alt="Image" src="https://github.com/user-attachments/assets/63c1d377-a54c-48bf-82f4-36b3b59bc529" />
+![Port Closed Confirmation](images/slide5_image3.png)
 
-<img width="1564" height="49" alt="Image" src="https://github.com/user-attachments/assets/550e93d7-8eeb-4050-bb6d-b8db039078e3" />
+---
 
-<img width="696" height="568" alt="Image" src="https://github.com/user-attachments/assets/bbbca3b6-3447-453e-8eba-6a3c79e4810f" />
+## Step 5 — Opening Windows Defender Firewall
 
-<img width="1748" height="49" alt="Image" src="https://github.com/user-attachments/assets/5e9d025d-1461-486e-8a5e-b1cd9c1651a2" />
+<img width="781" height="514" alt="Image" src="https://github.com/user-attachments/assets/c57b3408-601d-4053-8c2e-0ad61d5859d6" />
 
-<img width="788" height="643" alt="Image" src="https://github.com/user-attachments/assets/93f36e93-aea4-44f7-ae96-2be8e6f2e049" />
+<img width="781" height="470" alt="Image" src="https://github.com/user-attachments/assets/9d4a8c2a-7f43-474c-952e-d29b345cea31" />
 
-<img width="1478" height="49" alt="Image" src="https://github.com/user-attachments/assets/0953cecb-3ec0-4b7e-a72b-eed123136c37" />
+To create a permanent firewall rule, **Windows Defender Firewall** was opened. From the main screen, **Advanced Settings** was selected to access the advanced firewall configuration panel.
+
+![Windows Defender Main Screen](images/slide6_image1.jpg)
+
+![Advanced Settings Panel](images/slide6_image2.png)
+
+![Inbound Rules Overview](images/slide6_image3.png)
+
+---
+
+## Step 6 — Creating a New Inbound Rule
+
+<img width="760" height="438" alt="Image" src="https://github.com/user-attachments/assets/e2ee35e6-9c51-4b63-83dd-1c64277a946d" />
+
+<img width="707" height="516" alt="Image" src="https://github.com/user-attachments/assets/01c92cd7-8cac-4796-8cd7-cad0da37fd57" />
+
+Inside the Advanced Settings panel, the **Inbound Rules** section was accessed. On the right-hand side, **New Rule** was double-clicked to open the New Inbound Rule Wizard, which allows configuration of custom traffic-blocking parameters.
+
+![New Rule Option](images/slide7_image1.jpg)
+
+![New Inbound Rule Wizard](images/slide7_image2.png)
+
+![Rule Type Selection](images/slide7_image3.png)
+
+---
+
+## Step 7 — Configuring the Rule (Port & Protocol)
+
+<img width="692" height="528" alt="Image" src="https://github.com/user-attachments/assets/b506052d-dbf5-4602-86a2-9f7db2ed0f69" />
+
+<img width="807" height="567" alt="Image" src="https://github.com/user-attachments/assets/bbff30ec-07a6-49e3-aed9-bd4fada89c10" />
+
+The rule was configured as follows:
+
+- **Rule Type:** Port — selected because the attack was carried out via a specific port.
+- **Protocol:** UDP — confirmed by Protocol Hierarchy Statistics showing the malicious packets used **UDP, not TCP**.
+- **Port Specified:** `47394` — the exact port identified during analysis.
+
+![Port Rule Type Selected](images/slide8_image1.jpg)
+
+![UDP Protocol Selection](images/slide8_image2.png)
+
+![Port 47394 Specified](images/slide8_image3.png)
+
+---
+
+## Step 8 — Blocking the Connection
+
+<img width="696" height="568" alt="Image" src="https://github.com/user-attachments/assets/ee6f3b26-25b6-400c-8b64-6076c87c0f4d" />
+
+<img width="788" height="643" alt="Image" src="https://github.com/user-attachments/assets/3ef95075-9906-4b88-9acb-f5411c4cfa20" />
+
+The rule action was set to **Block the connection** to prevent any traffic from utilizing this port. The rule was then applied across all network profiles:
+
+- ✅ Domain
+- ✅ Private
+- ✅ Public
+
+![Block the Connection Selected](images/slide9_image1.jpg)
+
+![Profile Selection (Domain/Private/Public)](images/slide9_image2.png)
+
+---
+
+## Step 9 — Naming & Finalizing the Rule
+
+<img width="1011" height="703" alt="Image" src="https://github.com/user-attachments/assets/13792c0d-93a5-4933-b100-cb2747b24ef9" />
+
+A descriptive **name** and optional **description** were provided for the new firewall rule before saving. With this final step completed, the inbound rule was active and the DoS attack was successfully mitigated.
+
+---
+
+## Summary
+
+| Step | Action | Tool Used |
+|------|--------|-----------|
+| 1 | Opened and inspected pcap file | Wireshark |
+| 2 | Analyzed TCP stream in YAML format | Wireshark |
+| 3 | Ran Protocol Hierarchy Statistics | Wireshark |
+| 4 | Identified PID via `netstat` | Command Prompt |
+| 5 | Terminated malicious process via `taskkill` | Command Prompt |
+| 6 | Opened Windows Defender Firewall | Windows Defender |
+| 7 | Created a new Inbound Rule | Windows Defender |
+| 8 | Configured port/protocol (UDP/47394) | Windows Defender |
+| 9 | Blocked connection on all profiles | Windows Defender |
+| 10 | Named and finalized the firewall rule | Windows Defender |
+
+---
+
+## Tools & Technologies
+
+- [Wireshark](https://www.wireshark.org/) — Packet capture and network analysis
+- Windows Command Prompt — Process identification and termination
+- Windows Defender Firewall (Advanced Security) — Inbound rule configuration
+
 
 <img width="1011" height="703" alt="Image" src="https://github.com/user-attachments/assets/349204de-c15c-401c-8947-fe354719a427" />
 
